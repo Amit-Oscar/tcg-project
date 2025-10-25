@@ -1,0 +1,126 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Example models for a TCG project
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  username  String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations
+  collection Collection[]
+  trades     Trade[]
+}
+
+model Card {
+  id          Int      @id @default(autoincrement())
+  name        String
+  set         String
+  rarity      String
+  cardNumber  String
+  imageUrl    String?
+  
+  // Optional TCG-specific fields
+  tcgId       String?  // External API ID for price lookups
+  game        Game     @default(ONE_PIECE)
+  
+  createdAt   DateTime @default(now())
+  
+  // Relations
+  collections CollectionCard[]
+  tradeItems  TradeItem[]
+  prices      CardPrice[]
+  
+  @@unique([set, cardNumber])
+}
+
+model Collection {
+  id     Int    @id @default(autoincrement())
+  name   String
+  userId Int
+  
+  // Relations
+  user  User              @relation(fields: [userId], references: [id])
+  cards CollectionCard[]
+}
+
+model CollectionCard {
+  id           Int @id @default(autoincrement())
+  collectionId Int
+  cardId       Int
+  quantity     Int @default(1)
+  
+  // Relations
+  collection Collection @relation(fields: [collectionId], references: [id])
+  card       Card       @relation(fields: [cardId], references: [id])
+  
+  @@unique([collectionId, cardId])
+}
+
+model Trade {
+  id        Int         @id @default(autoincrement())
+  userId    Int
+  status    TradeStatus @default(PENDING)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  
+  // Relations
+  user  User        @relation(fields: [userId], references: [id])
+  items TradeItem[]
+}
+
+model TradeItem {
+  id       Int @id @default(autoincrement())
+  tradeId  Int
+  cardId   Int
+  quantity Int @default(1)
+  
+  // Relations
+  trade Trade @relation(fields: [tradeId], references: [id])
+  card  Card  @relation(fields: [cardId], references: [id])
+}
+
+enum TradeStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+enum Game {
+  ONE_PIECE
+  POKEMON
+  MAGIC_THE_GATHERING
+  YUGIOH
+  DRAGON_BALL
+}
+
+// Optional: Store historical price data
+model CardPrice {
+  id        Int      @id @default(autoincrement())
+  cardId    Int
+  price     Float    // Price in USD cents (e.g., 1050 = $10.50)
+  condition String   @default("NM") // Near Mint, Lightly Played, etc.
+  source    String   // "tcgplayer", "cardmarket", "justTCG", etc.
+  currency  String   @default("USD")
+  createdAt DateTime @default(now())
+  
+  // Relations
+  card Card @relation(fields: [cardId], references: [id])
+  
+  @@index([cardId, createdAt])
+}
