@@ -24,7 +24,13 @@ async function main() {
 
   // Create some example cards
   const card1 = await prisma.card.upsert({
-    where: { set_cardNumber: { set: 'Base Set', cardNumber: '001' } },
+    where: { 
+      set_cardNumber_game: { 
+        set: 'Base Set', 
+        cardNumber: '001',
+        game: 'POKEMON'
+      } 
+    },
     update: {},
     create: {
       name: 'Charizard',
@@ -32,11 +38,18 @@ async function main() {
       rarity: 'Rare Holo',
       cardNumber: '001',
       imageUrl: 'https://example.com/charizard.jpg',
+      game: 'POKEMON',
     },
   })
 
   const card2 = await prisma.card.upsert({
-    where: { set_cardNumber: { set: 'Base Set', cardNumber: '002' } },
+    where: { 
+      set_cardNumber_game: { 
+        set: 'Base Set', 
+        cardNumber: '002',
+        game: 'POKEMON'
+      } 
+    },
     update: {},
     create: {
       name: 'Blastoise',
@@ -44,6 +57,7 @@ async function main() {
       rarity: 'Rare Holo',
       cardNumber: '002',
       imageUrl: 'https://example.com/blastoise.jpg',
+      game: 'POKEMON',
     },
   })
 

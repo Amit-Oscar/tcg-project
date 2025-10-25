@@ -27,7 +27,8 @@ async function populateTestData() {
         await prisma.cardPrice.create({
           data: {
             cardId: card.id,
-            price: priceData.price,
+            sellPrice: priceData.price,
+            buyPrice: priceData.price * 0.7, // Buy price 70% of sell price
             condition: 'NM',
             source: 'mock-tcg',
             currency: 'USD',
@@ -75,7 +76,8 @@ async function populateTestData() {
       await prisma.cardPrice.create({
         data: {
           cardId: card.id,
-          price: Math.floor(Math.random() * 3000) + 500, // $5-$35
+          sellPrice: Math.floor(Math.random() * 3000) + 500, // $5-$35
+          buyPrice: Math.floor(Math.random() * 2000) + 300, // Buy price lower than sell
           condition: 'NM',
           source: 'optcg-api',
           currency: 'USD'

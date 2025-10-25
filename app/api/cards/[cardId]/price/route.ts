@@ -3,10 +3,11 @@ import { getCardWithPrice } from '@/lib/server-price-service'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { cardId: string } }
+  { params }: { params: Promise<{ cardId: string }> }
 ) {
   try {
-    const cardId = parseInt(params.cardId)
+    const { cardId: cardIdParam } = await params
+    const cardId = parseInt(cardIdParam)
     
     if (isNaN(cardId)) {
       return NextResponse.json(

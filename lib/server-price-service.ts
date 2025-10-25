@@ -1,7 +1,9 @@
 import { prisma } from './prisma'
 
 export interface PriceData {
-  price: number
+  buyPrice?: number
+  sellPrice: number
+  marketPrice?: number
   condition: string
   source: string
   currency: string
@@ -30,7 +32,8 @@ export async function fetchLivePrice(cardId: number): Promise<PriceData | null> 
 
     // Mock price data - replace with actual API calls
     const mockPrice: PriceData = {
-      price: Math.floor(Math.random() * 5000) + 100, // Random price between $1-$50
+      sellPrice: Math.floor(Math.random() * 5000) + 100, // Random price between $1-$50
+      buyPrice: Math.floor(Math.random() * 3500) + 50, // Buy price lower
       condition: 'NM',
       source: 'mock-api',
       currency: 'USD',
@@ -71,7 +74,9 @@ export async function getCardWithPrice(cardId: number): Promise<CardWithPrice | 
       cardNumber: card.cardNumber,
       currentPrice: livePrice || undefined,
       priceHistory: card.prices.map(p => ({
-        price: p.price,
+        buyPrice: p.buyPrice || undefined,
+        sellPrice: p.sellPrice,
+        marketPrice: p.marketPrice || undefined,
         condition: p.condition,
         source: p.source,
         currency: p.currency,
@@ -92,7 +97,9 @@ export async function storePriceData(cardId: number, priceData: PriceData): Prom
     await prisma.cardPrice.create({
       data: {
         cardId,
-        price: priceData.price,
+        buyPrice: priceData.buyPrice,
+        sellPrice: priceData.sellPrice,
+        marketPrice: priceData.marketPrice,
         condition: priceData.condition,
         source: priceData.source,
         currency: priceData.currency
@@ -112,4 +119,16 @@ export function formatPrice(price: number, currency = 'USD'): string {
     style: 'currency',
     currency
   }).format(amount)
+}
+
+/**
+ * Format buy/sell prices for display
+ */
+export function formatPriceRange(buyPrice: number | null, sellPrice: number, currency = 'USD'): string {
+  const sell = formatPrice(sellPrice, currency)
+  if (buyPrice) {
+    const buy = formatPrice(buyPrice, currency)
+    return `Buy: ${buy} | Sell: ${sell}`
+  }
+  return `Sell: ${sell}`
 }

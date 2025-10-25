@@ -31,22 +31,43 @@ model Card {
   id          Int      @id @default(autoincrement())
   name        String
   set         String
+  setCode     String?  // e.g., "ST01", "BAS", "DOM"
   rarity      String
   cardNumber  String
   imageUrl    String?
   
-  // Optional TCG-specific fields
+  // Enhanced search fields
+  description String?  // Card text/effect
+  type        String?  // e.g., "Character", "Event", "Land", "Creature"
+  cost        String?  // Mana cost, energy cost, etc.
+  power       String?  // Attack/Power
+  life        String?  // Life/Toughness
+  attribute   String?  // Color, type attribute
+  
+  // External API integration
   tcgId       String?  // External API ID for price lookups
+  scryfall_id String?  // For MTG cards
+  ptcgio_id   String?  // For Pokemon cards
+  optcg_id    String?  // For One Piece cards
+  
   game        Game     @default(ONE_PIECE)
   
+  // Metadata
   createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
   
   // Relations
   collections CollectionCard[]
   tradeItems  TradeItem[]
   prices      CardPrice[]
   
-  @@unique([set, cardNumber])
+  // Search indexes
+  @@index([name])
+  @@index([set])
+  @@index([game])
+  @@index([rarity])
+  @@index([tcgId])
+  @@unique([set, cardNumber, game])
 }
 
 model Collection {
@@ -109,18 +130,64 @@ enum Game {
   DRAGON_BALL
 }
 
-// Optional: Store historical price data
+enum PriceCondition {
+  MINT
+  NEAR_MINT
+  LIGHTLY_PLAYED
+  MODERATELY_PLAYED
+  HEAVILY_PLAYED
+  DAMAGED
+}
+
+// Data import tracking
+model DataImport {
+  id          Int      @id @default(autoincrement())
+  game        Game
+  source      String   // "scryfall", "pokemontcg", "optcg", "csv"
+  fileName    String?  // For CSV imports
+  status      ImportStatus @default(PENDING)
+  totalCards  Int      @default(0)
+  importedCards Int    @default(0)
+  errorCount  Int      @default(0)
+  errorLog    String?  // JSON string of errors
+  createdAt   DateTime @default(now())
+  completedAt DateTime?
+  
+  @@index([game, createdAt])
+}
+
+enum ImportStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+// Enhanced pricing model with buying/selling prices
 model CardPrice {
   id        Int      @id @default(autoincrement())
   cardId    Int
-  price     Float    // Price in USD cents (e.g., 1050 = $10.50)
+  
+  // Separate buying and selling prices
+  buyPrice  Float?   // What dealers/stores pay (lower)
+  sellPrice Float    // What dealers/stores sell for (higher)
+  
+  // Market data
+  marketPrice Float? // Average market price
+  lowPrice    Float? // Lowest available price
+  highPrice   Float? // Highest recent sale
+  
   condition String   @default("NM") // Near Mint, Lightly Played, etc.
-  source    String   // "tcgplayer", "cardmarket", "justTCG", etc.
+  source    String   // "tcgplayer", "cardmarket", "optcg", etc.
   currency  String   @default("USD")
+  
+  // Metadata
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   
   // Relations
-  card Card @relation(fields: [cardId], references: [id])
+  card Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
   
   @@index([cardId, createdAt])
+  @@index([source, createdAt])
 }
