@@ -2,6 +2,9 @@ import { prisma } from '../lib/prisma'
 import fs from 'fs'
 import path from 'path'
 import { parse } from 'csv-parse'
+import { pokemonAPI } from './apis/pokemon-tcg-api'
+import { scryfallAPI } from './apis/scryfall-api'
+import { getOnePieceCards, onePieceCardToCard } from './apis/onepiece-tcg-api'
 
 export interface CardImportData {
   name: string
@@ -51,71 +54,83 @@ export class TCGDataImporter {
     })
 
     try {
-      // Mock data for now - replace with actual API calls
-      const onePieceCards: CardImportData[] = [
-        {
-          name: 'Monkey D. Luffy',
-          set: 'Romance Dawn',
-          setCode: 'ST01',
-          rarity: 'Leader',
-          cardNumber: 'ST01-001',
-          imageUrl: 'https://onepiece-cardgame.dev/images/cards/ST01-001.jpg',
-          description: '[DON!! x1] [When Attacking] Give up to 1 of your Leader or Character cards +1000 power during this turn.',
-          type: 'Character',
-          cost: '0',
-          power: '5000',
-          life: '5',
-          attribute: 'Straw Hat Crew',
-          optcg_id: 'ST01-001',
-          game: 'ONE_PIECE'
-        },
-        {
-          name: 'Roronoa Zoro',
-          set: 'Romance Dawn',
-          setCode: 'ST01',
-          rarity: 'Super Rare',
-          cardNumber: 'ST01-013',
-          imageUrl: 'https://onepiece-cardgame.dev/images/cards/ST01-013.jpg',
-          description: '[On Play] K.O. up to 1 of your opponent\'s Characters with 3000 power or less.',
-          type: 'Character',
-          cost: '4',
-          power: '5000',
-          life: '0',
-          attribute: 'Straw Hat Crew',
-          optcg_id: 'ST01-013',
-          game: 'ONE_PIECE'
-        },
-        {
-          name: 'Nami',
-          set: 'Romance Dawn',
-          setCode: 'ST01',
-          rarity: 'Rare',
-          cardNumber: 'ST01-007',
-          imageUrl: 'https://onepiece-cardgame.dev/images/cards/ST01-007.jpg',
-          description: '[On Play] Draw 1 card.',
-          type: 'Character',
-          cost: '1',
-          power: '2000',
-          life: '0',
-          attribute: 'Straw Hat Crew',
-          optcg_id: 'ST01-007',
-          game: 'ONE_PIECE'
+      let allCards: any[] = []
+      let page = 1
+      let hasMore = true
+      
+      // Fetch all One Piece cards with pagination
+      while (hasMore) {
+        console.log(`📦 Fetching One Piece cards page ${page}...`)
+        const result = await getOnePieceCards(page, 100)
+        
+        allCards.push(...result.data)
+        hasMore = result.hasMore
+        page++
+        
+        // Add delay to avoid rate limiting
+        if (hasMore) {
+          await new Promise(resolve => setTimeout(resolve, 1000))
         }
-      ]
+      }
+      
+      console.log(`📦 Retrieved ${allCards.length} One Piece cards from API`)
 
-      await this.importCards(onePieceCards, importRecord.id)
+      // Convert to our format and import with async pricing
+      const cardsToImport = []
+      
+      // Process cards in batches to avoid overwhelming the pricing API
+      const batchSize = 20
+      for (let i = 0; i < allCards.length; i += batchSize) {
+        const batch = allCards.slice(i, i + batchSize)
+        console.log(`🔄 Processing One Piece cards batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(allCards.length / batchSize)}...`)
+        
+        const batchPromises = batch.map(async (card) => {
+          const convertedCard = await onePieceCardToCard(card)
+          const cardData: CardImportData = {
+            name: convertedCard.name,
+            set: convertedCard.set,
+            setCode: convertedCard.setCode,
+            rarity: convertedCard.rarity,
+            cardNumber: convertedCard.id,
+            imageUrl: convertedCard.imageUrl,
+            description: convertedCard.oracleText,
+            type: convertedCard.types?.[0] || 'Character',
+            cost: convertedCard.manaCost,
+            power: convertedCard.power,
+            life: '', // One Piece doesn't have life
+            attribute: card.attribute,
+            optcg_id: convertedCard.id,
+            game: 'ONE_PIECE' as const
+          }
+          
+          return {
+            card: cardData,
+            pricing: convertedCard.prices
+          }
+        })
+        
+        const batchResults = await Promise.all(batchPromises)
+        cardsToImport.push(...batchResults)
+        
+        // Add delay between batches to be respectful to pricing APIs
+        if (i + batchSize < allCards.length) {
+          await new Promise(resolve => setTimeout(resolve, 200))
+        }
+      }
+      
+      await this.importCardsWithPricing(cardsToImport, importRecord.id)
       
       await prisma.dataImport.update({
         where: { id: importRecord.id },
         data: {
           status: 'COMPLETED',
           completedAt: new Date(),
-          totalCards: onePieceCards.length,
-          importedCards: onePieceCards.length
+          totalCards: cardsToImport.length,
+          importedCards: cardsToImport.length
         }
       })
 
-      console.log(`✅ Imported ${onePieceCards.length} One Piece cards`)
+      console.log(`✅ Imported ${allCards.length} One Piece cards`)
     } catch (error) {
       await prisma.dataImport.update({
         where: { id: importRecord.id },
@@ -132,7 +147,7 @@ export class TCGDataImporter {
    * Import Pokemon cards from PokemonTCG API
    */
   async importPokemonCards(): Promise<void> {
-    console.log('⚡ Starting Pokemon card import...')
+    console.log('⚡ Starting Pokemon card import from API...')
     
     const importRecord = await prisma.dataImport.create({
       data: {
@@ -143,55 +158,26 @@ export class TCGDataImporter {
     })
 
     try {
-      // Mock data - replace with actual Pokemon TCG API calls
-      const pokemonCards: CardImportData[] = [
-        {
-          name: 'Pikachu',
-          set: 'Base Set',
-          setCode: 'BAS',
-          rarity: 'Common',
-          cardNumber: '25',
-          imageUrl: 'https://images.pokemontcg.io/base1/25.png',
-          description: 'When several of these POKéMON gather, their electricity could build and cause lightning storms.',
-          type: 'Lightning',
-          cost: '1',
-          power: '40',
-          life: '60',
-          attribute: 'Electric',
-          ptcgio_id: 'base1-25',
-          game: 'POKEMON'
-        },
-        {
-          name: 'Charizard',
-          set: 'Base Set',
-          setCode: 'BAS',
-          rarity: 'Rare Holo',
-          cardNumber: '4',
-          imageUrl: 'https://images.pokemontcg.io/base1/4.png',
-          description: 'Spits fire that is hot enough to melt boulders. Known to cause forest fires unintentionally.',
-          type: 'Fire',
-          cost: '4',
-          power: '100',
-          life: '120',
-          attribute: 'Fire',
-          ptcgio_id: 'base1-4',
-          game: 'POKEMON'
-        }
-      ]
+      // Get all Pokemon cards from API (this will be a large dataset)
+      const pokemonCards = await pokemonAPI.getAllCards()
+      console.log(`📦 Retrieved ${pokemonCards.length} Pokemon cards from API`)
 
-      await this.importCards(pokemonCards, importRecord.id)
+      // Convert to our format and import in batches
+      const cardsToImport = pokemonCards.map(card => pokemonAPI.convertToCardImportData(card))
+      
+      await this.importCardsWithPricing(cardsToImport, importRecord.id)
       
       await prisma.dataImport.update({
         where: { id: importRecord.id },
         data: {
           status: 'COMPLETED',
           completedAt: new Date(),
-          totalCards: pokemonCards.length,
-          importedCards: pokemonCards.length
+          totalCards: cardsToImport.length,
+          importedCards: cardsToImport.length
         }
       })
 
-      console.log(`✅ Imported ${pokemonCards.length} Pokemon cards`)
+      console.log(`✅ Imported ${cardsToImport.length} Pokemon cards`)
     } catch (error) {
       await prisma.dataImport.update({
         where: { id: importRecord.id },
@@ -208,7 +194,7 @@ export class TCGDataImporter {
    * Import Magic: The Gathering cards from Scryfall API
    */
   async importMTGCards(): Promise<void> {
-    console.log('🔮 Starting Magic: The Gathering card import...')
+    console.log('🔮 Starting Magic: The Gathering card import from API...')
     
     const importRecord = await prisma.dataImport.create({
       data: {
@@ -219,55 +205,26 @@ export class TCGDataImporter {
     })
 
     try {
-      // Mock data - replace with actual Scryfall API calls
-      const mtgCards: CardImportData[] = [
-        {
-          name: 'Lightning Bolt',
-          set: 'Alpha',
-          setCode: 'LEA',
-          rarity: 'Common',
-          cardNumber: '161',
-          imageUrl: 'https://cards.scryfall.io/normal/front/c/e/ce711943-c1a1-43a0-8b89-8d169cfb8e06.jpg',
-          description: 'Lightning Bolt deals 3 damage to any target.',
-          type: 'Instant',
-          cost: 'R',
-          power: '',
-          life: '',
-          attribute: 'Red',
-          scryfall_id: 'ce711943-c1a1-43a0-8b89-8d169cfb8e06',
-          game: 'MAGIC_THE_GATHERING'
-        },
-        {
-          name: 'Black Lotus',
-          set: 'Alpha',
-          setCode: 'LEA',
-          rarity: 'Rare',
-          cardNumber: '232',
-          imageUrl: 'https://cards.scryfall.io/normal/front/b/d/bd8fa327-dd41-4737-8f19-2cf5eb1f7cdd.jpg',
-          description: '{T}, Sacrifice Black Lotus: Add three mana of any one color.',
-          type: 'Artifact',
-          cost: '0',
-          power: '',
-          life: '',
-          attribute: 'Colorless',
-          scryfall_id: 'bd8fa327-dd41-4737-8f19-2cf5eb1f7cdd',
-          game: 'MAGIC_THE_GATHERING'
-        }
-      ]
+      // Get all Magic cards from Scryfall API (this will be a very large dataset)
+      const mtgCards = await scryfallAPI.getAllCards()
+      console.log(`📦 Retrieved ${mtgCards.length} Magic cards from API`)
 
-      await this.importCards(mtgCards, importRecord.id)
+      // Convert to our format and import in batches
+      const cardsToImport = mtgCards.map(card => scryfallAPI.convertToCardImportData(card))
+      
+      await this.importCardsWithPricing(cardsToImport, importRecord.id)
       
       await prisma.dataImport.update({
         where: { id: importRecord.id },
         data: {
           status: 'COMPLETED',
           completedAt: new Date(),
-          totalCards: mtgCards.length,
-          importedCards: mtgCards.length
+          totalCards: cardsToImport.length,
+          importedCards: cardsToImport.length
         }
       })
 
-      console.log(`✅ Imported ${mtgCards.length} MTG cards`)
+      console.log(`✅ Imported ${cardsToImport.length} MTG cards`)
     } catch (error) {
       await prisma.dataImport.update({
         where: { id: importRecord.id },
@@ -388,7 +345,6 @@ export class TCGDataImporter {
         await prisma.cardPrice.create({
           data: {
             cardId: card.id,
-            buyPrice: priceData.buyPrice,
             sellPrice: priceData.sellPrice,
             marketPrice: priceData.marketPrice,
             lowPrice: priceData.lowPrice,
@@ -421,6 +377,64 @@ export class TCGDataImporter {
     } catch (error) {
       console.error('❌ Error during TCG data import:', error)
       throw error
+    }
+  }
+
+  /**
+   * Helper method to import cards with pricing into database
+   */
+  async importCardsWithPricing(cardsWithPricing: Array<{ card: CardImportData; pricing?: any }>, importId?: number): Promise<void> {
+    console.log(`📦 Importing ${cardsWithPricing.length} cards with pricing...`)
+    
+    for (const { card: cardData, pricing } of cardsWithPricing) {
+      try {
+        // Upsert the card
+        const card = await prisma.card.upsert({
+          where: {
+            set_cardNumber_game: {
+              set: cardData.set,
+              cardNumber: cardData.cardNumber,
+              game: cardData.game
+            }
+          },
+          update: {
+            name: cardData.name,
+            setCode: cardData.setCode,
+            rarity: cardData.rarity,
+            imageUrl: cardData.imageUrl,
+            description: cardData.description,
+            type: cardData.type,
+            cost: cardData.cost,
+            power: cardData.power,
+            life: cardData.life,
+            attribute: cardData.attribute,
+            tcgId: cardData.tcgId,
+            scryfall_id: cardData.scryfall_id,
+            ptcgio_id: cardData.ptcgio_id,
+            optcg_id: cardData.optcg_id,
+            updatedAt: new Date()
+          },
+          create: cardData
+        })
+
+        // Add pricing if available
+        if (pricing) {
+          await prisma.cardPrice.create({
+            data: {
+              cardId: card.id,
+              sellPrice: pricing.sellPrice || pricing.marketPrice || 0, // Use marketPrice as fallback, or 0
+              marketPrice: pricing.marketPrice,
+              lowPrice: pricing.lowPrice,
+              highPrice: pricing.highPrice,
+              condition: pricing.condition || "NM",
+              source: pricing.source || "unknown",
+              currency: pricing.currency || "USD"
+            }
+          })
+        }
+      } catch (error) {
+        console.error(`❌ Error importing card ${cardData.name}:`, error)
+      }
     }
   }
 
@@ -465,3 +479,10 @@ export class TCGDataImporter {
 }
 
 export const tcgImporter = new TCGDataImporter()
+
+// Export the method for standalone use
+export async function importCardsWithPricing(cardsData: CardImportData[], game: 'ONE_PIECE' | 'POKEMON' | 'MAGIC_THE_GATHERING'): Promise<void> {
+  // Convert CardImportData to the format expected by importCardsWithPricing
+  const cardsWithPricing = cardsData.map(card => ({ card, pricing: null }))
+  await tcgImporter.importCardsWithPricing(cardsWithPricing)
+}

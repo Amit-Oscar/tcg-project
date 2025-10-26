@@ -146,7 +146,6 @@ export async function GET(request: NextRequest) {
       attribute: card.attribute,
       game: card.game,
       currentPrice: card.prices[0] ? {
-        buyPrice: card.prices[0].buyPrice,
         sellPrice: card.prices[0].sellPrice,
         marketPrice: card.prices[0].marketPrice,
         condition: card.prices[0].condition,

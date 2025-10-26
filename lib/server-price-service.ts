@@ -74,7 +74,6 @@ export async function getCardWithPrice(cardId: number): Promise<CardWithPrice | 
       cardNumber: card.cardNumber,
       currentPrice: livePrice || undefined,
       priceHistory: card.prices.map(p => ({
-        buyPrice: p.buyPrice || undefined,
         sellPrice: p.sellPrice,
         marketPrice: p.marketPrice || undefined,
         condition: p.condition,
@@ -97,7 +96,6 @@ export async function storePriceData(cardId: number, priceData: PriceData): Prom
     await prisma.cardPrice.create({
       data: {
         cardId,
-        buyPrice: priceData.buyPrice,
         sellPrice: priceData.sellPrice,
         marketPrice: priceData.marketPrice,
         condition: priceData.condition,

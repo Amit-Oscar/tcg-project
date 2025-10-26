@@ -38,71 +38,71 @@ export default async function Home() {
   const stats = await getDbStats()
   
   return (
-    <div className="min-h-screen bg-gray-900 py-8">
+    <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-white mb-4">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
             TCG Card Price Tracker
           </h1>
-          <p className="text-lg text-gray-300">
+          <p className="text-lg text-gray-600">
             Search and track pricing for One Piece, Pokemon, and Magic: The Gathering cards
           </p>
         </div>
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-6 text-center">
-            <div className="text-3xl font-bold text-blue-400 mb-2">{stats.totalCards}</div>
-            <div className="text-gray-300">Total Cards</div>
+          <div className="bg-white rounded-lg shadow-sm p-6 text-center">
+            <div className="text-3xl font-bold text-blue-600 mb-2">{stats.totalCards}</div>
+            <div className="text-gray-600">Total Cards</div>
           </div>
-          <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-6 text-center">
-            <div className="text-3xl font-bold text-green-400 mb-2">{stats.totalPrices}</div>
-            <div className="text-gray-300">Price Records</div>
+          <div className="bg-white rounded-lg shadow-sm p-6 text-center">
+            <div className="text-3xl font-bold text-green-600 mb-2">{stats.totalPrices}</div>
+            <div className="text-gray-600">Price Records</div>
           </div>
-          <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-6 text-center">
-            <div className="text-3xl font-bold text-purple-400 mb-2">{stats.cardsByGame.length}</div>
-            <div className="text-gray-300">TCG Games</div>
+          <div className="bg-white rounded-lg shadow-sm p-6 text-center">
+            <div className="text-3xl font-bold text-purple-600 mb-2">{stats.cardsByGame.length}</div>
+            <div className="text-gray-600">TCG Games</div>
           </div>
         </div>
 
         {/* Game Statistics */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-6 mb-8">
-          <h2 className="text-2xl font-semibold text-white mb-4">Cards by Game</h2>
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
+          <h2 className="text-2xl font-semibold mb-4">Cards by Game</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {stats.cardsByGame.map((game) => (
-              <div key={game.game} className="flex items-center justify-between p-4 bg-gray-700 border border-gray-600 rounded-lg">
+              <div key={game.game} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center">
                   <span className="text-2xl mr-3">
                     {game.game === 'ONE_PIECE' && '🏴‍☠️'}
                     {game.game === 'POKEMON' && '⚡'}
                     {game.game === 'MAGIC_THE_GATHERING' && '🔮'}
                   </span>
-                  <span className="font-medium text-gray-200">
+                  <span className="font-medium">
                     {game.game.replace('_', ' ').replace('MAGIC THE GATHERING', 'Magic: The Gathering')}
                   </span>
                 </div>
-                <span className="text-lg font-bold text-white">{game._count.game}</span>
+                <span className="text-lg font-bold text-gray-900">{game._count.game}</span>
               </div>
             ))}
           </div>
         </div>
 
         {/* Main Actions */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-6 mb-8">
-          <h2 className="text-2xl font-semibold text-white mb-6">Get Started</h2>
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
+          <h2 className="text-2xl font-semibold mb-6">Get Started</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Link 
               href="/search" 
-              className="block p-6 bg-gray-700 rounded-lg border border-gray-600 hover:bg-gray-600 transition-colors"
+              className="block p-6 bg-blue-50 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors"
             >
-              <h3 className="text-xl font-semibold text-blue-400 mb-2">🔍 Search Cards</h3>
-              <p className="text-gray-300">
+              <h3 className="text-xl font-semibold text-blue-800 mb-2">🔍 Search Cards</h3>
+              <p className="text-blue-600">
                 Search through your card collection with advanced filters for game, set, rarity, and price range.
               </p>
             </Link>
-            <div className="p-6 bg-gray-700 rounded-lg border border-gray-600">
-              <h3 className="text-xl font-semibold text-green-400 mb-2">💰 Live Pricing</h3>
-              <p className="text-gray-300">
+            <div className="p-6 bg-green-50 rounded-lg border border-green-200">
+              <h3 className="text-xl font-semibold text-green-800 mb-2">💰 Live Pricing</h3>
+              <p className="text-green-600">
                 View both buying and selling prices with historical tracking and market trends.
               </p>
             </div>
@@ -110,12 +110,12 @@ export default async function Home() {
         </div>
 
         {/* System Status */}
-        <div className="bg-gray-800 border border-gray-700 rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-semibold text-white mb-4">System Status</h2>
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h2 className="text-2xl font-semibold mb-4">System Status</h2>
           <div className="space-y-4">
-            <div className="bg-gray-700 border border-gray-600 rounded-lg p-4">
-              <h3 className="font-medium text-green-400 mb-2">✅ System Ready</h3>
-              <ul className="text-gray-300 text-sm space-y-1">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <h3 className="font-medium text-green-800 mb-2">✅ System Ready</h3>
+              <ul className="text-green-700 text-sm space-y-1">
                 <li>• Next.js 16 with TypeScript and Turbopack</li>
                 <li>• Prisma ORM with enhanced search capabilities</li>
                 <li>• Multi-TCG support (One Piece, Pokemon, MTG)</li>
@@ -125,20 +125,20 @@ export default async function Home() {
             </div>
 
             {stats.latestImport && (
-              <div className="bg-gray-700 border border-gray-600 rounded-lg p-4">
-                <h3 className="font-medium text-blue-400 mb-2">📥 Latest Import</h3>
-                <p className="text-gray-300 text-sm">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="font-medium text-blue-800 mb-2">� Latest Import</h3>
+                <p className="text-blue-700 text-sm">
                   {stats.latestImport.game.replace('_', ' ')} cards imported from {stats.latestImport.source} 
-                  <span className="text-gray-400 ml-2">
+                  <span className="text-gray-600 ml-2">
                     ({new Date(stats.latestImport.createdAt).toLocaleDateString()})
                   </span>
                 </p>
               </div>
             )}
 
-            <div className="bg-gray-700 border border-gray-600 rounded-lg p-4">
-              <h3 className="font-medium text-yellow-400 mb-2">🚀 Next Features</h3>
-              <ul className="text-gray-300 text-sm space-y-1">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <h3 className="font-medium text-yellow-800 mb-2">� Next Features</h3>
+              <ul className="text-yellow-700 text-sm space-y-1">
                 <li>• CSV export/import functionality</li>
                 <li>• Real-time API integrations</li>
                 <li>• Automated price updates</li>
