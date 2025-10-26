@@ -106,8 +106,8 @@ export default function CardSearch() {
     searchCards(newFilters)
   }
 
-  const formatPrice = (price: number, currency = 'USD') => {
-    return new Intl.NumberFormat('en-US', {
+  const formatPrice = (price: number, currency = 'CAD') => {
+    return new Intl.NumberFormat('en-CA', {
       style: 'currency',
       currency,
       minimumFractionDigits: 2

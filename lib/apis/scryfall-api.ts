@@ -200,22 +200,40 @@ export class ScryfallAPI {
 
   // Convert Scryfall card to our database format
   convertToCardImportData(scryfallCard: ScryfallCard) {
-    // Get the best available price
+    // Get the best available price with fallbacks
     let sellPrice: number | undefined
     let marketPrice: number | undefined
     let lowPrice: number | undefined
     let highPrice: number | undefined
+    let priceSource = 'Scryfall'
 
-    if (scryfallCard.prices.usd) {
-      sellPrice = parseFloat(scryfallCard.prices.usd)
+    // Exchange rate USD to CAD (approximate)
+    const USD_TO_CAD = 1.37
+
+    // Try USD price first
+    if (scryfallCard.prices.usd && scryfallCard.prices.usd !== null) {
+      sellPrice = parseFloat(scryfallCard.prices.usd) * USD_TO_CAD
+    }
+    // Fall back to USD foil if available
+    else if (scryfallCard.prices.usd_foil && scryfallCard.prices.usd_foil !== null) {
+      sellPrice = parseFloat(scryfallCard.prices.usd_foil) * USD_TO_CAD
+      priceSource = 'Scryfall (Foil)'
+    }
+    // Fall back to EUR price converted to CAD
+    else if (scryfallCard.prices.eur && scryfallCard.prices.eur !== null) {
+      sellPrice = parseFloat(scryfallCard.prices.eur) * 1.5 // EUR to CAD conversion
+      priceSource = 'Scryfall (EUR→CAD)'
+    }
+    // Generate realistic fallback pricing based on rarity and card characteristics
+    else {
+      sellPrice = this.generateFallbackPrice(scryfallCard) * USD_TO_CAD
+      priceSource = 'Estimated (CAD)'
+    }
+
+    if (sellPrice) {
       marketPrice = sellPrice
-      lowPrice = sellPrice * 0.8 // Estimate 20% below market
-      highPrice = sellPrice * 1.3 // Estimate 30% above market
-    } else if (scryfallCard.prices.usd_foil) {
-      sellPrice = parseFloat(scryfallCard.prices.usd_foil)
-      marketPrice = sellPrice
-      lowPrice = sellPrice * 0.8
-      highPrice = sellPrice * 1.3
+      lowPrice = Math.max(0.15, sellPrice * 0.7) // At least 15 cents CAD, usually 30% below market
+      highPrice = sellPrice * 1.5 // 50% above market for high demand
     }
 
     return {
@@ -241,9 +259,54 @@ export class ScryfallAPI {
         lowPrice,
         highPrice,
         condition: 'Near Mint',
-        source: 'Scryfall',
-        currency: 'USD'
+        source: priceSource,
+        currency: 'CAD'
       } : undefined
+    }
+  }
+
+  // Generate realistic fallback pricing for cards without Scryfall pricing (in USD, will be converted to CAD)
+  private generateFallbackPrice(card: ScryfallCard): number {
+    let basePrice = 0.25 // Base price for common cards
+    
+    // Adjust by rarity
+    switch (card.rarity.toLowerCase()) {
+      case 'common':
+        basePrice = Math.random() * 0.5 + 0.1 // $0.10-$0.60 USD
+        break
+      case 'uncommon':
+        basePrice = Math.random() * 1.5 + 0.3 // $0.30-$1.80 USD
+        break
+      case 'rare':
+        basePrice = Math.random() * 8 + 1 // $1.00-$9.00 USD
+        break
+      case 'mythic':
+      case 'mythic rare':
+        basePrice = Math.random() * 25 + 3 // $3.00-$28.00 USD
+        break
+      default:
+        basePrice = Math.random() * 2 + 0.5 // $0.50-$2.50 USD
+    }
+
+    // Adjust for special characteristics
+    if (card.reserved) basePrice *= 3 // Reserved list cards are more expensive
+    if (card.foil && !card.nonfoil) basePrice *= 1.5 // Foil-only cards
+    if (card.promo) basePrice *= 1.3 // Promo cards
+    if (card.full_art) basePrice *= 1.2 // Full art cards
+    
+    // Adjust based on set age (older sets tend to be more expensive)
+    const releaseYear = new Date(card.released_at).getFullYear()
+    const currentYear = new Date().getFullYear()
+    const ageMultiplier = Math.max(1, (currentYear - releaseYear) * 0.1 + 1)
+    basePrice *= ageMultiplier
+
+    // Round to realistic price points
+    if (basePrice < 1) {
+      return Math.round(basePrice * 100) / 100 // Round to cents
+    } else if (basePrice < 10) {
+      return Math.round(basePrice * 20) / 20 // Round to nearest $0.05
+    } else {
+      return Math.round(basePrice * 4) / 4 // Round to nearest $0.25
     }
   }
 }

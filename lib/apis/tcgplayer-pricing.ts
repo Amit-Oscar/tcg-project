@@ -62,12 +62,15 @@ export async function getTCGPlayerPricing(cardName: string, setName: string, gam
  * Simulates realistic TCGPlayer pricing based on card characteristics
  */
 function getSimulatedTCGPlayerPricing(cardName: string, setName: string, gameName: string): TCGPlayerPricing {
-  // Base prices by game
+  // Base prices by game (in USD, will be converted to CAD)
   const basePrices = {
     'ONEPIECE': 3.99,
     'POKEMON': 2.49,
     'MAGIC': 1.99
   };
+
+  // Exchange rate USD to CAD
+  const USD_TO_CAD = 1.37;
 
   // Popular cards get higher prices
   const popularityMultiplier = getPopularityMultiplier(cardName, gameName);
@@ -75,26 +78,27 @@ function getSimulatedTCGPlayerPricing(cardName: string, setName: string, gameNam
   // Set age affects pricing (newer sets are generally more expensive)
   const setMultiplier = getSetMultiplier(setName, gameName);
   
-  // Calculate base price
-  const basePrice = (basePrices[gameName as keyof typeof basePrices] || 1.99) * popularityMultiplier * setMultiplier;
+  // Calculate base price in USD first
+  const basePriceUSD = (basePrices[gameName as keyof typeof basePrices] || 1.99) * popularityMultiplier * setMultiplier;
   
   // Add market variation (±25%)
   const variation = (Math.random() - 0.5) * 0.5;
-  const marketPrice = Math.max(0.25, basePrice * (1 + variation));
+  const marketPriceUSD = Math.max(0.25, basePriceUSD * (1 + variation));
   
-  // Calculate other price points
-  const lowPrice = marketPrice * 0.75;
-  const highPrice = marketPrice * 1.4;
-  const sellPrice = marketPrice * 1.1; // Slightly above market for selling
+  // Calculate other price points in USD
+  const lowPriceUSD = marketPriceUSD * 0.75;
+  const highPriceUSD = marketPriceUSD * 1.4;
+  const sellPriceUSD = marketPriceUSD * 1.1; // Slightly above market for selling
   
+  // Convert all prices to CAD
   return {
-    sellPrice: Math.round(sellPrice * 100) / 100,
-    marketPrice: Math.round(marketPrice * 100) / 100,
-    lowPrice: Math.round(lowPrice * 100) / 100,
-    highPrice: Math.round(highPrice * 100) / 100,
+    sellPrice: Math.round(sellPriceUSD * USD_TO_CAD * 100) / 100,
+    marketPrice: Math.round(marketPriceUSD * USD_TO_CAD * 100) / 100,
+    lowPrice: Math.round(lowPriceUSD * USD_TO_CAD * 100) / 100,
+    highPrice: Math.round(highPriceUSD * USD_TO_CAD * 100) / 100,
     condition: 'NM',
     source: 'tcgplayer_simulation',
-    currency: 'USD'
+    currency: 'CAD'
   };
 }
 
@@ -152,14 +156,17 @@ function getSetMultiplier(setName: string, gameName: string): number {
  * Fallback pricing when all else fails
  */
 function getFallbackPricing(): TCGPlayerPricing {
+  // Convert fallback USD pricing to CAD
+  const USD_TO_CAD = 1.37;
+  
   return {
-    sellPrice: 1.99,
-    marketPrice: 1.49,
-    lowPrice: 0.99,
-    highPrice: 2.99,
+    sellPrice: Math.round(1.99 * USD_TO_CAD * 100) / 100,
+    marketPrice: Math.round(1.49 * USD_TO_CAD * 100) / 100,
+    lowPrice: Math.round(0.99 * USD_TO_CAD * 100) / 100,
+    highPrice: Math.round(2.99 * USD_TO_CAD * 100) / 100,
     condition: 'NM',
     source: 'fallback',
-    currency: 'USD'
+    currency: 'CAD'
   };
 }
 

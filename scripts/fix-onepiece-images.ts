@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 
-import { validateOnePieceImages } from './lib/apis/onepiece-tcg-api';
+import { validateOnePieceImages } from '../lib/apis/onepiece-tcg-api';
 
 async function main() {
   console.log('🏴‍☠️ One Piece Image Validator & Fixer');

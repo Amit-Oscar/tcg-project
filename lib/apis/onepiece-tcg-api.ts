@@ -308,14 +308,17 @@ export async function getOnePieceCardPricing(cardName: string, setName: string):
     // Use the centralized TCGPlayer pricing service
     const tcgPricing = await getTCGPlayerPricing(cardName, setName, 'ONEPIECE');
     
+    // Convert USD pricing to CAD
+    const USD_TO_CAD = 1.37;
+    
     return {
-      sellPrice: tcgPricing.sellPrice,
-      marketPrice: tcgPricing.marketPrice,
-      lowPrice: tcgPricing.lowPrice,
-      highPrice: tcgPricing.highPrice,
+      sellPrice: tcgPricing.sellPrice * USD_TO_CAD,
+      marketPrice: tcgPricing.marketPrice ? tcgPricing.marketPrice * USD_TO_CAD : undefined,
+      lowPrice: tcgPricing.lowPrice ? tcgPricing.lowPrice * USD_TO_CAD : undefined,
+      highPrice: tcgPricing.highPrice ? tcgPricing.highPrice * USD_TO_CAD : undefined,
       condition: tcgPricing.condition,
       source: tcgPricing.source,
-      currency: tcgPricing.currency
+      currency: 'CAD'
     };
     
   } catch (error) {
@@ -326,14 +329,17 @@ export async function getOnePieceCardPricing(cardName: string, setName: string):
 
 // Fallback pricing for when APIs are unavailable
 function getFallbackPricing(cardName: string): OnePieceCardPricing {
+  // Convert fallback USD pricing to CAD
+  const USD_TO_CAD = 1.37;
+  
   return {
-    sellPrice: 1.99,
-    marketPrice: 1.99,
-    lowPrice: 0.99,
-    highPrice: 3.99,
+    sellPrice: 1.99 * USD_TO_CAD,
+    marketPrice: 1.99 * USD_TO_CAD,
+    lowPrice: 0.99 * USD_TO_CAD,
+    highPrice: 3.99 * USD_TO_CAD,
     condition: 'NM',
     source: 'fallback',
-    currency: 'USD'
+    currency: 'CAD'
   };
 }
 

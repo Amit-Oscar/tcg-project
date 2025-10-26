@@ -1,7 +1,7 @@
-import { TCGDataImporter } from './lib/tcg-importer';
-import { pokemonAPI } from './lib/apis/pokemon-tcg-api';
-import { scryfallAPI } from './lib/apis/scryfall-api';
-import { getOnePieceCards, onePieceCardToCard, OnePieceCard } from './lib/apis/onepiece-tcg-api';
+import { TCGDataImporter } from '../lib/tcg-importer';
+import { pokemonAPI } from '../lib/apis/pokemon-tcg-api';
+import { scryfallAPI } from '../lib/apis/scryfall-api';
+import { getOnePieceCards, onePieceCardToCard, OnePieceCard } from '../lib/apis/onepiece-tcg-api';
 
 class FullTCGImporter {
   private importedCounts = {

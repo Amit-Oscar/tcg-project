@@ -246,20 +246,38 @@ export class PokemonTCGAPI {
     let condition = 'Near Mint'
     let source = 'Pokemon TCG API'
 
+    // Exchange rate USD to CAD (approximate)
+    const USD_TO_CAD = 1.37
+
     if (pokemonCard.tcgplayer?.prices) {
       const prices = pokemonCard.tcgplayer.prices
       // Prefer holofoil, then normal, then any available
       const priceData = prices.holofoil || prices.normal || prices.reverseHolofoil || prices['1stEditionHolofoil'] || prices['1stEditionNormal']
       
       if (priceData) {
-        sellPrice = priceData.market || priceData.mid || priceData.high
-        marketPrice = priceData.market || priceData.mid
+        sellPrice = (priceData.market || priceData.mid || priceData.high) * USD_TO_CAD
+        marketPrice = (priceData.market || priceData.mid) * USD_TO_CAD
         source = 'TCGPlayer'
       }
     } else if (pokemonCard.cardmarket?.prices) {
-      sellPrice = pokemonCard.cardmarket.prices.averageSellPrice
-      marketPrice = pokemonCard.cardmarket.prices.trendPrice
-      source = 'Cardmarket'
+      // Cardmarket prices are in EUR, convert to CAD
+      const EUR_TO_CAD = 1.5
+      sellPrice = pokemonCard.cardmarket.prices.averageSellPrice * EUR_TO_CAD
+      marketPrice = pokemonCard.cardmarket.prices.trendPrice * EUR_TO_CAD
+      source = 'Cardmarket (EUR→CAD)'
+    }
+
+    // Convert price ranges to CAD
+    let lowPrice: number | undefined
+    let highPrice: number | undefined
+    
+    if (pokemonCard.tcgplayer?.prices) {
+      const prices = pokemonCard.tcgplayer.prices
+      const priceData = prices.holofoil || prices.normal || prices.reverseHolofoil
+      if (priceData) {
+        lowPrice = priceData.low ? priceData.low * USD_TO_CAD : undefined
+        highPrice = priceData.high ? priceData.high * USD_TO_CAD : undefined
+      }
     }
 
     return {
@@ -282,11 +300,11 @@ export class PokemonTCGAPI {
       pricing: sellPrice ? {
         sellPrice,
         marketPrice,
-        lowPrice: pokemonCard.tcgplayer?.prices?.holofoil?.low || pokemonCard.tcgplayer?.prices?.normal?.low,
-        highPrice: pokemonCard.tcgplayer?.prices?.holofoil?.high || pokemonCard.tcgplayer?.prices?.normal?.high,
+        lowPrice,
+        highPrice,
         condition,
         source,
-        currency: 'USD'
+        currency: 'CAD'
       } : undefined
     }
   }

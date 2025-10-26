@@ -1,5 +1,5 @@
-import { prisma } from './lib/prisma';
-import { FullTCGImporter } from './import-all-cards';
+import { prisma } from '../lib/prisma'
+import { FullTCGImporter } from './import-all-cards'
 
 async function clearDatabase() {
   console.log('🗑️  Clearing existing database...');
